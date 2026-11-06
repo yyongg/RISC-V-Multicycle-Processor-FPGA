@@ -17,38 +17,53 @@ module alu#(
 
     // mux for ALU control
     always_comb begin
+        overflow = 1'b0;
+        negative = 1'b0;
+        carry = 1'b0;
+        wide = 0;
+        prod = 0;
+        result = num_a;
+
         case (opcode)
-            4'b0000: begin  // addition
+            4'b0000: begin  // ADD
                 wide = {1'b0, num_a} + {1'b0, num_b};   // create an extra bit for carry
                 result = wide[MSB:0];
                 carry = wide[BIT_LENGTH];
                 overflow = (num_a[MSB] == num_b[MSB]) && (result[MSB] != num_a[MSB]);
             end
-
-            4'b0001: begin  // subtraction
+            4'b0001: result = num_a << num_b[4:0]; // SLL
+            4'b0010: result = $signed(num_a) < $signed(num_b); // SLT
+            4'b0011: result = num_a < num_b; // SLTU
+            4'b0100: result = num_a ^ num_b; // XOR
+            4'b0101: result = num_a >> num_b[4:0]; // SRL
+            4'b0110: result = num_a | num_b; // OR (bitwise)
+            4'b0111: result = num_a & num_b; // AND (bitwise)
+            4'b1000: begin  // SUB
                 wide = {1'b0, num_a} - {1'b0, num_b};   // create an extra bit for carry
                 result = wide[MSB:0];
                 carry = wide[BIT_LENGTH];
                 overflow = (num_a[MSB] != num_b[MSB]) && (result[MSB] != num_a[MSB]);
             end
-            4'b0010: result = num_a * num_b; // multiplicatiion
-            4'b0011: result = num_a / num_b; // division
-            4'b0100: result = num_a & num_b; // bitwise AND
-            4'b0101: result = num_a | num_b; // bitwise OR
-            4'b0110: result = num_a ^ num_b; // bitwise XOR
-            4'b0111: result = ~(num_a | num_b); // bitwise NOR
-            4'b1000: result = !num_a; // bitwise invert operand A
-            4'b1001: result = ~(num_a & num_b); // bitwise NAND
-            4'b1010: result = num_a << 1; // shift left
-            4'b1011: result = num_b >> 1; // shift right 1
-            4'b1100: result = {num_a[BIT_LENGTH-2:0], num_a[BIT_LENGTH-1]}; // rotate left (ROL)
-            4'b1101: result = {num_a[0],num_a[BIT_LENGTH-1:1]}; // rotate right (ROR)
-            4'b1110: result = 0; // compare
-            4'b1111: result = num_a; // pass
-            default: result = 0;
+            4'b1001: begin  // MUL
+                prod = num_a*num_b;
+                result = prod[MSB:0];
+                carry = |prod[2*BIT_LENGTH-1:BIT_LENGTH];
+                overflow = carry;
+            end
+            4'b1010: begin  // MULH
+                prod = num_a*num_b;
+                result = prod[2*BIT_LENGTH-1:BIT_LENGTH];
+            end
+            4'b1011: begin end
+            4'b1100: begin end
+            4'b1101: begin end
+            4'b1110: result = {num_a[0],num_a[BIT_LENGTH-1:1]}; // rotate right (ROR)
+            4'b1111: result = {num_a[BIT_LENGTH-2:0], num_a[BIT_LENGTH-1]}; // rotate left (ROL)
+            default: result = num_a; // pass
         endcase
+
+        zero = result==0;
     end
 
-    assign zero = result == 0;
-    assign negative = result[0]
+    assign negative = result[0];
 endmodule
