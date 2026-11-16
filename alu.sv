@@ -20,7 +20,6 @@ module alu#(
 );
     logic [BIT_LENGTH:0] wide;
     logic [2*BIT_LENGTH-1:0] rot;
-    logic [2*BIT_LENGTH-1:0] prod;
 
     // mux for ALU control
     always_comb begin
