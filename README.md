@@ -29,3 +29,13 @@
 | AUIPC | `0010111` | 1 | 0 | PC | imm | ADD | ALU | |
 | FENCE / ECALL | `0001111` / `1110011` | 0 | 0 | | | | | treat as NOP |
 | anything else | | 0 | 0 | | | | | default: nothing written |
+
+# Immediate Generator
+## Reconstruction of Immediate from Instruction
+| Format | Instruction Bits Used | Output Construction (32-bit) | Purpose |
+|--------|----------------------|-------------------------------|---------|
+| I-type | `inst[31:20]` | `{20{inst[31]}, inst[31:20]}` | ALU immediates, loads (LW), JALR |
+| S-type | `inst[31:25]`, `inst[11:7]` | `{20{inst[31]}, inst[31:25], inst[11:7]}` | Store offsets (SW, SB) |
+| B-type | `inst[31]`, `inst[7]`, `inst[30:25]`, `inst[11:8]` | `{19{inst[31]}, inst[31], inst[7], inst[30:25], inst[11:8], 1'b0}` | Conditional branch offsets (BEQ, BNE) |
+| U-type | `inst[31:12]` | `{inst[31:12], 12'b0}` | Upper 20-bit constants (LUI, AUIPC) |
+| J-type | `inst[31]`, `inst[19:12]`, `inst[20]`, `inst[30:21]` | `{11{inst[31]}, inst[31], inst[19:12], inst[20], inst[30:21], 1'b0}` | Unconditional jump offsets (JAL) |

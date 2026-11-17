@@ -1,0 +1,30 @@
+module immgen(
+    input logic[31:0] inst,
+    output logic[31:0] imm
+);
+    logic[6:0] opcode;
+
+    always_comb begin
+        opcode = inst[6:0];
+        imm = 32'b0;
+        case (opcode)
+            // I-type
+            7'b0010011, 7'b0000011, 7'b1100111: imm = { {20{inst[31]}}, inst[31:20]} ;
+
+            // S-type
+            7'b0100011: imm = { {20{inst[31]}}, inst[31:25], inst[11:7] };
+
+            // B-type
+            7'b1100011: imm = { {20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0 };
+
+            // U-type
+            7'b0110111, 7'b0010111: imm = { inst[31:12], 12'b0 };
+
+            // J-type
+            7'b1101111: imm = { {12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0 };
+
+            // R-type/everything else: do nothing
+            default: ;
+        endcase
+    end
+endmodule
