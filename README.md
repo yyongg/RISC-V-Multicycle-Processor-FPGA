@@ -15,16 +15,17 @@
 | J-Type | Unconditional jump & link | `1101111` | `0x6F` | `jal` |
 
 
-## Decorder
-Instruction	opcode	reg_write	mem_write	alu_src_a	alu_src_b	alu_ctrl	result_src	other
-R-type	0110011	1	0	rs1	rs2	{f7[5], f3}	ALU	
-I-type ALU	0010011	1	0	rs1	imm	{f3==101 ? f7[5] : 0, f3}	ALU	
-Load	0000011	1	0	rs1	imm	ADD	MEM	mem_read
-Store	0100011	0	1	rs1	imm	ADD	—	
-Branch	1100011	0	0	rs1	rs2	SUB	—	branch
-JAL	1101111	1	0	—	—	—	PC+4	jump, target = PC+imm
-JALR	1100111	1	0	rs1	imm	ADD	PC+4	jump, target = ALU & ~1
-LUI	0110111	1	0	0	imm	ADD	ALU	
-AUIPC	0010111	1	0	PC	imm	ADD	ALU	
-FENCE / ECALL	0001111 / 1110011	0	0					treat as NOP
-anything else		0	0					default: nothing written
+## Decoder
+| Instruction | opcode | reg_write | mem_write | alu_src_a | alu_src_b | alu_ctrl | result_src | other |
+|-------------|--------|-----------|-----------|-----------|-----------|----------|------------|-------|
+| R-type | `0110011` | 1 | 0 | rs1 | rs2 | `{f7[5], f3}` | ALU | |
+| I-type ALU | `0010011` | 1 | 0 | rs1 | imm | `{f3==101 ? f7[5] : 0, f3}` | ALU | |
+| Load | `0000011` | 1 | 0 | rs1 | imm | ADD | MEM | `mem_read` |
+| Store | `0100011` | 0 | 1 | rs1 | imm | ADD | — | |
+| Branch | `1100011` | 0 | 0 | rs1 | rs2 | SUB | — | `branch` |
+| JAL | `1101111` | 1 | 0 | — | — | — | PC+4 | `jump`, target = PC+imm |
+| JALR | `1100111` | 1 | 0 | rs1 | imm | ADD | PC+4 | `jump`, target = `ALU & ~1` |
+| LUI | `0110111` | 1 | 0 | 0 | imm | ADD | ALU | |
+| AUIPC | `0010111` | 1 | 0 | PC | imm | ADD | ALU | |
+| FENCE / ECALL | `0001111` / `1110011` | 0 | 0 | | | | | treat as NOP |
+| anything else | | 0 | 0 | | | | | default: nothing written |
