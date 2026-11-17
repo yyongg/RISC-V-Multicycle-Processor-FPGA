@@ -28,7 +28,7 @@ module control_unit(
         reg_write  = 1'b0;  mem_write = 1'b0;  mem_read = 1'b0;
         branch     = 1'b0;  jump      = 1'b0;  is_jalr  = 1'b0;
         alu_src_a  = 2'd0;  alu_src_b = 1'b0;
-        alu_ctrl   = 4'b0000;
+        alu_ctrl   = ALU_ADD;
         result_src = 2'd0;
 
         case (opcode)
@@ -36,6 +36,7 @@ module control_unit(
             7'b0110011: begin
                 reg_write = 1'b1;
                 alu_ctrl  = {funct7[5], funct3};
+                result_src = 2'b00; // ALU result
             end
 
             // I-type ALU
@@ -48,39 +49,67 @@ module control_unit(
 
             // I-type Memory Load
             7'b0000011: begin
+                reg_write = 1'b1;
+                alu_src_a = 2'b00;  // rs1
+                alu_src_b = 1'b1;   // Immediate
+                alu_ctrl = ALU_ADD;
+                mem_read = 1'b1;
+                result_src = 2'b01; // Data Memory Result
             end
 
-            // I-type Indirect Jump
+            // I-type Indirect Jump (JALR)
             7'b1100111: begin
-            end
-
-            // I-type System and CSR
-            7'b1110011: begin
-            end
-
-            // I-type Memory Fence
-            7'b0001111: begin
+                reg_write = 1'b1;
+                result_src = 2'b10; // PC+4 result
+                alu_src_a = 2'b00;  // rs1
+                alu_src_b = 1'b1;   // Immediate
+                alu_ctrl = ALU_ADD;
+                jump = 1'b1;
+                is_jalr = 1'b1;
             end
 
             // S-type Memory Store
             7'b0100011: begin
+                mem_write = 1'b1;
+                alu_src_a = 2'b00;  // rs1
+                alu_src_b = 1'b1;   // immediate
+                alu_ctrl = ALU_ADD;
             end
 
             // B-type Conditional Branches
             7'b1100011: begin
+                branch = 1'b1;
+                alu_src_a = 2'b00;  // rs1
+                alu_src_b = 1'b0;   // rs2 
+                alu_ctrl = ALU_SUB;
+                result_src = 2'b01; // Data Memory Result
             end
 
-            // U-type Load Upper Immediate
+            // U-type Load Upper Immediate (LUI)
             7'b0110111: begin
+                reg_write = 1'b1;
+                alu_src_a = 2'b10;   // Zero
+                alu_src_b = 1'b1;    // immediate
+                alu_ctrl = ALU_ADD;
+                result_src = 2'b00;  // ALU result
             end
 
-            // U-type Add Upper Immediate to PC
+            // U-type Add Upper Immediate to PC (AUIPC)
             7'b0010111: begin
+                reg_write = 1'b1;
+                alu_src_a = 2'b01;  // PC
+                alu_src_b = 1'b1;   // immediate
+                alu_ctrl = ALU_ADD;
+                result_src = 2'b00; // ALU result
             end
 
-            // J-type Unconditional Jump & Link
+            // J-type Unconditional Jump And Link (JAL)
             7'b1101111: begin
+                reg_write = 1'b1;
+                result_src = 2'b10; // PC+4 result
+                jump = 1'b1;
             end
+            default: ;  // if anything else do nothing, including FENCE and ECALL
         endcase
     end
 endmodule
