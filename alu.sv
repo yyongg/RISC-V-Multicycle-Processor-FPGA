@@ -13,10 +13,7 @@ module alu#(
     input logic [MSB:0] num_b,
 
     output logic [MSB:0] result,
-    output logic zero,
-    output logic overflow,
-    output logic negative,
-    output logic carry
+    output logic zero, overflow, negative, carry
 );
     logic [BIT_LENGTH:0] wide;
     logic [2*BIT_LENGTH-1:0] rot;

@@ -10,5 +10,9 @@ build:
 prog: #for sram
 	dfu-util --device 1d50:6146 --alt 0 -D $(filename).bin -R
 
+test:
+	iverilog -g2012 -o cpu_tb.vvp cpu_tb.sv
+	vvp cpu_tb.vvp
+
 clean:
-	rm -rf $(filename).blif $(filename).asc $(filename).json $(filename).bin $(filename)_tb.vvp
+	rm -rf $(filename).blif $(filename).asc $(filename).json $(filename).bin $(filename)_tb.vvp cpu_tb.vvp cpu_tb.vcd
