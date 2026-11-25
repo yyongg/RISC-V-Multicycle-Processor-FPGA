@@ -1,0 +1,21 @@
+# Synthesis / place-and-route outputs (make build)
+*.json
+*.asc
+*.bin
+*.blif
+
+# Simulation outputs (make test)
+*.vvp
+*.vcd
+*.fst
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
