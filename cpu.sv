@@ -1,5 +1,8 @@
 // RV32I multi-cycle CPU
-// FETCH -> DECODE -> EXECUTE -> (MEM, loads only) -> FETCH
+// FETCH -> DECODE -> EXECUTE -> MEM -> (WB, loads only) -> FETCH
+//   EXECUTE: ALU runs; result and branch decision are registered (alu_out, take_br)
+//   MEM:     memory access / register write / PC update, all from registered values
+//   WB:      load data written to rd
 
 module cpu (
     input  logic        clk,
@@ -16,11 +19,13 @@ module cpu (
 );
     localparam logic [31:0] PC_RESET = 32'h0000_1000;
 
-    typedef enum logic [1:0] { FETCH, DECODE, EXECUTE, MEM } state_t;
+    typedef enum logic [2:0] { FETCH, DECODE, EXECUTE, MEM, WB } state_t;
     state_t state = FETCH;
 
-    logic [31:0] pc    = PC_RESET;
-    logic [31:0] instr = 32'h0000_0013;   // NOP (addi x0, x0, 0)
+    logic [31:0] pc      = PC_RESET;
+    logic [31:0] instr   = 32'h0000_0013; // NOP (addi x0, x0, 0)
+    logic [31:0] alu_out = 32'd0;         // ALU result latched at the end of EXECUTE
+    logic        take_br = 1'b0;          // branch decision latched at the end of EXECUTE
 
     // instruction fields
     logic [6:0] opcode, funct7;
@@ -93,32 +98,32 @@ module cpu (
     assign pc_target = pc + imm;                    // branches and JAL
 
     always_comb begin
-        if (jump && is_jalr)            pc_next = alu_result & ~32'd1;  // JALR
-        else if (jump)                  pc_next = pc_target;            // JAL
-        else if (branch && take_branch) pc_next = pc_target;            // taken branch
-        else                            pc_next = pc_plus4;
+        if (jump && is_jalr)        pc_next = alu_out & ~32'd1;  // JALR
+        else if (jump)              pc_next = pc_target;         // JAL
+        else if (branch && take_br) pc_next = pc_target;         // taken branch
+        else                        pc_next = pc_plus4;
     end
 
     // write-back
     always_comb begin
         case (result_src)
-            2'd0:    rd_data = alu_result;
+            2'd0:    rd_data = alu_out;
             2'd1:    rd_data = dmem_data_out;
             2'd2:    rd_data = pc_plus4;
-            default: rd_data = alu_result;
+            default: rd_data = alu_out;
         endcase
     end
 
-    // write rd at the end of EXECUTE (non-loads) or at the end of MEM (loads)
+    // write rd at the end of MEM (non-loads) or at the end of WB (loads)
     assign rf_we = reg_write &&
-                   (((state == EXECUTE) && !mem_read) || (state == MEM));
+                   (((state == MEM) && !mem_read) || (state == WB));
 
-    // memory interface
+    // memory interface (address comes from a register, not straight from the ALU)
     assign imem_address = pc;
-    assign dmem_address = alu_result;
+    assign dmem_address = alu_out;
     assign dmem_data_in = rs2_data;
     assign mem_funct3   = funct3;
-    assign dmem_wren    = mem_write && (state == EXECUTE);   // write exactly once
+    assign dmem_wren    = mem_write && (state == MEM);   // write exactly once
 
     // FSM
     always_ff @(posedge clk) begin
@@ -134,15 +139,20 @@ module cpu (
                     state <= EXECUTE;
                 end
                 EXECUTE: begin
+                    alu_out <= alu_result;
+                    take_br <= take_branch;
+                    state   <= MEM;
+                end
+                MEM: begin
                     if (mem_read) begin
-                        state <= MEM;              // dmem latches the load this edge
+                        state <= WB;               // dmem latches the load this edge
                     end else begin
-                        pc    <= pc_next;
+                        pc    <= pc_next;          // rd / store written this edge
                         state <= FETCH;
                     end
                 end
-                MEM: begin
-                    pc    <= pc_plus4;             // rd is written by rf_we this edge
+                WB: begin
+                    pc    <= pc_plus4;             // load result written to rd this edge
                     state <= FETCH;
                 end
                 default: state <= FETCH;

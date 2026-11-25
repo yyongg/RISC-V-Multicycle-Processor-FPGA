@@ -1,0 +1,13 @@
+ffc00413  # 1000: li   s0, -4            # LED register
+ff800493  # 1004: li   s1, -8            # millis
+1f400913  # 1008: li   s2, 500
+00ff0337  # 100c: li   t1, 0x00FF0000    # red
+00642023  # 1010: loop: sw t1, 0(s0)
+0004a283  # 1014: lw   t0, 0(s1)
+012283b3  # 1018: add  t2, t0, s2
+0004a283  # 101c: wait: lw t0, 0(s1)
+fe72cee3  # 1020: blt  t0, t2, wait
+00835313  # 1024: srli t1, t1, 8
+fe0314e3  # 1028: bnez t1, loop
+00ff0337  # 102c: li   t1, 0x00FF0000
+fe1ff06f  # 1030: j    loop

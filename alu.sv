@@ -16,14 +16,15 @@ module alu#(
     output logic zero, overflow, negative, carry
 );
     logic [BIT_LENGTH:0] wide;
-    logic [2*BIT_LENGTH-1:0] rot;
+    logic signed [BIT_LENGTH:0] shr;    // shared right shifter for SRL / SRA
 
     // mux for ALU control
     always_comb begin
         overflow = 1'b0;
         carry = 1'b0;
         wide = 0;
-        rot = 0;
+        // SRL fills with 0, SRA (opcode[3]=1) fills with the sign bit
+        shr = $signed({opcode[3] & num_a[MSB], num_a}) >>> num_b[SHAMT-1:0];
 
         case (opcode)
             4'b0000: begin                                          // ADD
@@ -37,7 +38,7 @@ module alu#(
             4'b0010: result = $signed(num_a) < $signed(num_b);      // SLT
             4'b0011: result = num_a < num_b;                        // SLTU
             4'b0100: result = num_a ^ num_b;                        // XOR
-            4'b0101: result = num_a >> num_b[SHAMT-1:0];            // SRL
+            4'b0101: result = shr[MSB:0];                           // SRL
             4'b0110: result = num_a | num_b;                        // OR (bitwise)
             4'b0111: result = num_a & num_b;                        // AND (bitwise)
             4'b1000: begin                                          // SUB
@@ -47,15 +48,7 @@ module alu#(
                 carry = wide[BIT_LENGTH];   // BORROW: 1 when num_a < num_b (unsigned)
                 overflow = (num_a[MSB] != num_b[MSB]) && (result[MSB] != num_a[MSB]);
             end
-            4'b1101: result = $signed(num_a) >>> num_b[SHAMT-1:0];  // SRA
-            4'b1110: begin                                          // ROR: rotate right by num_b
-                rot    = {num_a, num_a} >> num_b[SHAMT-1:0];
-                result = rot[MSB:0];
-            end
-            4'b1111: begin                                          // ROL: rotate left by num_b
-                rot    = {num_a, num_a} << num_b[SHAMT-1:0];
-                result = rot[2*BIT_LENGTH-1:BIT_LENGTH];
-            end
+            4'b1101: result = shr[MSB:0];                           // SRA
             default: result = num_a;                                // pass
         endcase
 
